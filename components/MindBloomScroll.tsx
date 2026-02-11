@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useScroll, useTransform, useMotionValueEvent } from 'framer-motion';
 import { ThoughtCategory } from '@/data/thoughts';
-import ThoughtOverlays from './ThoughtOverlays';
+import ThoughtInteraction from './ThoughtInteraction';
 
 interface MindBloomScrollProps {
     thought: ThoughtCategory;
@@ -99,39 +99,70 @@ export default function MindBloomScroll({ thought }: MindBloomScrollProps) {
     useEffect(() => {
         if (isLoaded && images.length > 0) {
             // Trigger a manual update to draw first frame
-            frameIndex.set(1);
+            // We set it to 1.1 to force a change if it starts at 1
+            frameIndex.set(1.1);
+            setTimeout(() => frameIndex.set(1), 50);
         }
     }, [isLoaded, images, frameIndex]);
 
 
-    // Resize handler
+    // Resize handler (Debounced)
     useEffect(() => {
+        let timeoutId: NodeJS.Timeout;
         const handleResize = () => {
-            if (canvasRef.current) {
-                canvasRef.current.width = window.innerWidth;
-                canvasRef.current.height = window.innerHeight;
-                // Trigger redraw if needed
-            }
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                if (canvasRef.current) {
+                    canvasRef.current.width = window.innerWidth;
+                    canvasRef.current.height = window.innerHeight;
+                    // Trigger redraw if needed by slightly nudging the value
+                    const current = frameIndex.get();
+                    frameIndex.set(current + 0.01);
+                    setTimeout(() => frameIndex.set(current), 10);
+                }
+            }, 100);
         };
         window.addEventListener('resize', handleResize);
-        handleResize(); // Init
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+        // Initial setup
+        if (canvasRef.current) {
+            canvasRef.current.width = window.innerWidth;
+            canvasRef.current.height = window.innerHeight;
+        }
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            clearTimeout(timeoutId);
+        };
+    }, [frameIndex]);
 
     return (
         <div ref={containerRef} className="relative h-[400vh]"> {/* Tuned to 400vh for 48 frames feeling */}
             <div className="sticky top-0 h-screen w-full overflow-hidden bg-black">
+                {/* Loading State Overlay */}
+                {!isLoaded && (
+                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black">
+                        <div className="flex flex-col items-center gap-4">
+                            <div className="w-12 h-12 border-2 border-[var(--gold)] border-t-transparent rounded-full animate-spin" />
+                            <p className="text-[var(--gold)] text-sm uppercase tracking-widest animate-pulse">
+                                Initializing Neural Pathways...
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 <canvas
                     ref={canvasRef}
-                    className="absolute inset-0 w-full h-full object-cover opacity-90 mix-blend-screen"
+                    className={`absolute inset-0 w-full h-full object-cover opacity-90 mix-blend-screen transition-opacity duration-700 ${isLoaded ? 'opacity-90' : 'opacity-0'}`}
                 />
+
                 {/* Gradient Overlay for aesthetic */}
                 <div
                     className="absolute inset-0 pointer-events-none"
                     style={{ background: thought.gradient, opacity: 0.2, mixBlendMode: 'overlay' }}
                 />
 
-                <ThoughtOverlays thought={thought} scrollYProgress={scrollYProgress} />
+
+                {/* Interaction Overlay */}
+                <ThoughtInteraction scrollYProgress={scrollYProgress} />
             </div>
         </div>
     );
