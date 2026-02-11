@@ -1,6 +1,10 @@
 export default function NeuralNav() {
     return (
-        <nav className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-6 py-4 backdrop-blur-xl border-b border-white/5 bg-black/20">
+        <nav 
+            className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-6 py-4 backdrop-blur-xl border-b border-white/5 bg-black/20"
+            role="navigation"
+            aria-label="Main navigation"
+        >
             <div className="flex items-center gap-3">
                 {/* Custom Neural Synapse Icon */}
                 <svg
@@ -9,6 +13,7 @@ export default function NeuralNav() {
                     viewBox="0 0 24 24"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
+                    aria-label="Neural Archive Synapse Icon"
                     className="text-[var(--gold)]"
                 >
                     <path
@@ -29,13 +34,7 @@ export default function NeuralNav() {
                 </span>
             </div>
 
-            <button className="group relative px-5 py-2 overflow-hidden rounded-full bg-white/5 border border-white/10 hover:border-[var(--gold)]/50 transition-all duration-300">
-                <div className="absolute inset-0 w-full h-full bg-[var(--gold)]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-md" />
-                <span className="relative text-sm font-medium tracking-wide text-white/80 group-hover:text-white transition-colors">
-                    Quick Note
-                </span>
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/3 h-[1px] bg-[var(--gold)] opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-[0_0_10px_var(--gold)]" />
-            </button>
+
         </nav>
     );
 }

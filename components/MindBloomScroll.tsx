@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useScroll, useTransform, useMotionValueEvent } from 'framer-motion';
-import { ThoughtCategory } from '@/data/thoughts';
-import ThoughtOverlays from './ThoughtOverlays';
+import { ThoughtCategory } from '@/types/thoughts';
+import { useImagePreloader } from '@/hooks/useImagePreloader';
+import ThoughtInteraction from './ThoughtInteraction';
 
 interface MindBloomScrollProps {
     thought: ThoughtCategory;
@@ -12,53 +13,17 @@ interface MindBloomScrollProps {
 export default function MindBloomScroll({ thought }: MindBloomScrollProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [images, setImages] = useState<HTMLImageElement[]>([]);
-    const [isLoaded, setIsLoaded] = useState(false);
+    const { images, isLoaded, progress } = useImagePreloader(thought.folderPath, thought.frameCount);
 
     const { scrollYProgress } = useScroll({
         target: containerRef,
         offset: ["start start", "end end"]
     });
 
-    // Map scroll progress (0 to 1) to frame index.
-    // We have 48 frames: 001 to 048.
-    // To keep it smooth, we might limit the range where it blooms. Like 0 to 0.8.
-    const frameIndex = useTransform(scrollYProgress, [0, 1], [1, 48]);
+    // Map scroll progress (0 to 1) to frame index based on actual frame count
+    const frameIndex = useTransform(scrollYProgress, [0, 1], [1, thought.frameCount]);
 
-    // Preload images
-    useEffect(() => {
-        const loadImages = async () => {
-            const loadedImages: HTMLImageElement[] = [];
-            // We found 48 frames in the directory inspection earlier.
-            const frameCount = 48;
-
-            const promises = [];
-
-            for (let i = 1; i <= frameCount; i++) {
-                const promise = new Promise<void>((resolve) => {
-                    const img = new Image();
-                    // Pad component with zeros e.g. 001, 010
-                    const paddedIndex = i.toString().padStart(3, '0');
-                    img.src = `${thought.folderPath}/ezgif-frame-${paddedIndex}.jpg`;
-                    img.onload = () => {
-                        loadedImages[i - 1] = img; // maintain order
-                        resolve();
-                    };
-                    img.onerror = () => {
-                        // If image missing, just skip or resolve
-                        resolve();
-                    };
-                });
-                promises.push(promise);
-            }
-
-            await Promise.all(promises);
-            setImages(loadedImages);
-            setIsLoaded(true);
-        };
-
-        loadImages();
-    }, [thought.folderPath]);
+    // Image preloading is now handled by useImagePreloader hook
 
     // Render Loop
     useMotionValueEvent(frameIndex, "change", (latest) => {
@@ -67,6 +32,10 @@ export default function MindBloomScroll({ thought }: MindBloomScrollProps) {
 
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
+
+        // Enable image smoothing for better quality when scaling
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
 
         const index = Math.min(Math.max(Math.floor(latest) - 1, 0), images.length - 1);
         const img = images[index];
@@ -99,39 +68,90 @@ export default function MindBloomScroll({ thought }: MindBloomScrollProps) {
     useEffect(() => {
         if (isLoaded && images.length > 0) {
             // Trigger a manual update to draw first frame
-            frameIndex.set(1);
+            // We set it to 1.1 to force a change if it starts at 1
+            frameIndex.set(1.1);
+            setTimeout(() => frameIndex.set(1), 50);
         }
     }, [isLoaded, images, frameIndex]);
 
 
-    // Resize handler
+    // Resize handler (Debounced) with high-DPI support
     useEffect(() => {
+        let timeoutId: NodeJS.Timeout;
         const handleResize = () => {
-            if (canvasRef.current) {
-                canvasRef.current.width = window.innerWidth;
-                canvasRef.current.height = window.innerHeight;
-                // Trigger redraw if needed
-            }
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                if (canvasRef.current) {
+                    const dpr = window.devicePixelRatio || 1;
+                    const displayWidth = window.innerWidth;
+                    const displayHeight = window.innerHeight;
+                    
+                    // Set canvas resolution for high-DPI displays
+                    canvasRef.current.width = displayWidth * dpr;
+                    canvasRef.current.height = displayHeight * dpr;
+                    
+                    // Scale canvas back to display size
+                    canvasRef.current.style.width = `${displayWidth}px`;
+                    canvasRef.current.style.height = `${displayHeight}px`;
+                    
+                    // Scale context to match device pixel ratio
+                    const ctx = canvasRef.current.getContext('2d');
+                    if (ctx) {
+                        ctx.scale(dpr, dpr);
+                    }
+                    
+                    // Trigger redraw if needed by slightly nudging the value
+                    const current = frameIndex.get();
+                    frameIndex.set(current + 0.01);
+                    setTimeout(() => frameIndex.set(current), 10);
+                }
+            }, 100);
         };
         window.addEventListener('resize', handleResize);
-        handleResize(); // Init
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+        // Initial setup
+        handleResize();
+        
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            clearTimeout(timeoutId);
+        };
+    }, [frameIndex]);
 
     return (
-        <div ref={containerRef} className="relative h-[400vh]"> {/* Tuned to 400vh for 48 frames feeling */}
+        <div ref={containerRef} className="relative h-[300vh]"> {/* Tuned to 300vh for 90 frames = 30 frames per viewport */}
             <div className="sticky top-0 h-screen w-full overflow-hidden bg-black">
+                {/* Loading State Overlay */}
+                {!isLoaded && (
+                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black" role="status" aria-live="polite">
+                        <div className="flex flex-col items-center gap-4">
+                            <div 
+                                className="w-12 h-12 border-2 border-[var(--gold)] border-t-transparent rounded-full animate-spin" 
+                                aria-hidden="true"
+                            />
+                            <p className="text-[var(--gold)] text-sm uppercase tracking-widest animate-pulse">
+                                Initializing Neural Pathways... {Math.round(progress)}%
+                            </p>
+                            <span className="sr-only">Loading animation frames: {Math.round(progress)}% complete</span>
+                        </div>
+                    </div>
+                )}
+
                 <canvas
                     ref={canvasRef}
-                    className="absolute inset-0 w-full h-full object-cover opacity-90 mix-blend-screen"
+                    className={`absolute inset-0 w-full h-full object-cover opacity-90 mix-blend-screen transition-opacity duration-700 ${isLoaded ? 'opacity-90' : 'opacity-0'}`}
+                    role="img"
+                    aria-label={`${thought.title}: ${thought.description}. Animated neural bloom visualization.`}
                 />
+
                 {/* Gradient Overlay for aesthetic */}
                 <div
                     className="absolute inset-0 pointer-events-none"
                     style={{ background: thought.gradient, opacity: 0.2, mixBlendMode: 'overlay' }}
                 />
 
-                <ThoughtOverlays thought={thought} scrollYProgress={scrollYProgress} />
+
+                {/* Interaction Overlay */}
+                <ThoughtInteraction scrollYProgress={scrollYProgress} />
             </div>
         </div>
     );
