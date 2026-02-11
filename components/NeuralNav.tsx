@@ -1,6 +1,10 @@
 export default function NeuralNav() {
     return (
-        <nav className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-6 py-4 backdrop-blur-xl border-b border-white/5 bg-black/20">
+        <nav 
+            className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-6 py-4 backdrop-blur-xl border-b border-white/5 bg-black/20"
+            role="navigation"
+            aria-label="Main navigation"
+        >
             <div className="flex items-center gap-3">
                 {/* Custom Neural Synapse Icon */}
                 <svg

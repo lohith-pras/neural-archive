@@ -60,7 +60,8 @@ export default function ThoughtInteraction({ scrollYProgress }: ThoughtInteracti
                     {/* "Thought?" Button - Centered */}
                     <button
                         onClick={() => setIsModalOpen(true)}
-                        className="group relative px-16 py-8 bg-transparent overflow-hidden rounded-full transition-all duration-300 hover:scale-105"
+                        className="group relative px-16 py-8 bg-transparent overflow-hidden rounded-full transition-all duration-300 hover:scale-105 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--gold)] focus:ring-offset-2 focus:ring-offset-black"
+                        aria-label="Capture your thought"
                     >
                         {/* Glass/Blur Background */}
                         <div className="absolute inset-0 bg-white/20 backdrop-blur-xl border border-white/20 group-hover:border-[var(--gold)]/50 transition-colors duration-300 rounded-full" />
@@ -84,6 +85,9 @@ export default function ThoughtInteraction({ scrollYProgress }: ThoughtInteracti
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="thought-modal-title"
                     >
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
@@ -94,13 +98,14 @@ export default function ThoughtInteraction({ scrollYProgress }: ThoughtInteracti
                             {/* Close Button */}
                             <button
                                 onClick={closeModal}
-                                className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors"
+                                className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--gold)] rounded"
+                                aria-label="Close thought capture modal"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 18 18" /></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 18 18" /></svg>
                             </button>
 
                             {/* Modal Header */}
-                            <h3 className="text-2xl font-light text-[var(--gold)] mb-6 tracking-wide">
+                            <h3 id="thought-modal-title" className="text-2xl font-light text-[var(--gold)] mb-6 tracking-wide">
                                 Crystallize Your Thought
                             </h3>
 
@@ -109,21 +114,25 @@ export default function ThoughtInteraction({ scrollYProgress }: ThoughtInteracti
                                 value={note}
                                 onChange={(e) => setNote(e.target.value)}
                                 placeholder="What ignited the spark?..."
-                                className="w-full h-48 bg-white/5 border border-white/10 rounded-xl p-4 text-lg text-white placeholder:text-white/20 focus:outline-none focus:border-[var(--gold)]/50 transition-colors resize-none mb-8"
+                                className="w-full h-48 bg-white/5 border border-white/10 rounded-xl p-4 text-lg text-white placeholder:text-white/20 focus:outline-none focus:border-[var(--gold)]/50 focus:ring-2 focus:ring-[var(--gold)]/30 transition-colors resize-none mb-8"
                                 autoFocus
+                                aria-label="Enter your thought"
                             />
 
                             {/* Action Buttons */}
                             <div className="flex justify-end gap-4">
                                 <button
                                     onClick={closeModal}
-                                    className="px-6 py-3 text-sm text-white/40 hover:text-white transition-colors uppercase tracking-wider"
+                                    className="px-6 py-3 text-sm text-white/40 hover:text-white transition-colors uppercase tracking-wider cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/50 rounded"
+                                    aria-label="Discard thought"
                                 >
                                     Discard
                                 </button>
                                 <button
                                     onClick={handleSave}
-                                    className="px-8 py-3 bg-[var(--gold)] text-black font-bold rounded-lg hover:bg-[#ffe44d] transition-colors uppercase tracking-wider hover:shadow-lg hover:shadow-[var(--gold)]/20"
+                                    className="px-8 py-3 bg-[var(--gold)] text-black font-bold rounded-lg hover:bg-[#ffe44d] transition-colors uppercase tracking-wider hover:shadow-lg hover:shadow-[var(--gold)]/20 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--gold)] focus:ring-offset-2 focus:ring-offset-[#09090b]"
+                                    disabled={!note.trim()}
+                                    aria-label="Save and preserve thought"
                                 >
                                     Preserve
                                 </button>
